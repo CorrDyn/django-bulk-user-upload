@@ -1,0 +1,80 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+{% block extrastyle %}
+    {{ block.super }}
+{% endblock extrastyle %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script src="{% static "js/c-is-for-cookie.js" %}" charset="UTF-8"></script>
+    <script src="{% static "js/dynamic-html-util.js" %}" charset="UTF-8"></script>
+    <script>
+        console.log("look ma no hands")
+      {
+        const $ = django.jQuery;
+        const HIDE_NAV = '_popup';
+
+        function getPopupSize(pathname) {
+          // Cookie Script loaded from /templates/admin/base_site.html,
+          // popup resize being tracked via popup-utils.js loaded in
+          // /api/templates/admin/api_change_list.html
+          const lastSize = JSON.parse(cookie.getCookie(`size:${pathname}`))
+          if (lastSize) {
+            return lastSize
+          }
+          return {height: 500, width: $(window).width()}
+        }
+
+        function showAdminPopup(triggeringLink, name_regexp, hide_nav) {
+          const name = triggeringLink.id.replace(name_regexp, '');
+          const href = new URL(triggeringLink.href)
+          const {pathname, searchParams} = href;
+          if (hide_nav) {
+            searchParams.set(HIDE_NAV, '1');
+          }
+          const {height, width} = getPopupSize(pathname);
+          const win = window.open(href, name, `height=${height},width=${width},resizable=yes,scrollbars=yes`);
+          win.focus();
+          return false;
+        }
+
+        function showRelatedObjectPopup(triggeringLink) {
+          return showAdminPopup(triggeringLink, /^(change|add|delete)_/, true);
+        }
+
+        $(document).ready(function () {
+          $('body').on('click', '.popup-link', function (e) {
+            e.preventDefault();
+            if (this.href) {
+              const event = $.Event('django:show-related', {href: this.href});
+              $(this).trigger(event);
+              if (!event.isDefaultPrevented()) {
+                showRelatedObjectPopup(this);
+              }
+            }
+          });
+        });
+      }
+    </script>
+    <script id="add-bulk-upload-button">
+      {
+        const $ = django.jQuery;
+
+        const upload_button = DynamicHTMLUtil.htmlToElement(
+          `<input id="bulk-upload-button"  type="submit" value="Bulk Upload Users" class="default">`
+        )
+        const hidden_link = DynamicHTMLUtil.htmlToElement(
+          `<a id="bulk-upload-link" href="{% url "admin:bulk-upload-users" %}" style="display: none;"/>`
+        )
+
+        $(document).ready(function () {
+          document.querySelector('#changelist-search div').appendChild(upload_button)
+          document.querySelector('#changelist-search div').appendChild(hidden_link)
+          document.getElementById("bulk-upload-button").addEventListener("click", (e) => {
+            e.preventDefault();
+            showRelatedObjectPopup(hidden_link)
+          })
+        });
+      }
+    </script>
+{% endblock extrahead %}

@@ -1,0 +1,2 @@
+username,email,name,permissions,groups
+jdean,jdean@example.com,James Dean,"users.add_user,users.change_user",

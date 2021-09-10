@@ -1,0 +1,87 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}Bulk User Upload | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}">
+{% endblock extrastyle %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script src="/static/admin/js/vendor/jquery/jquery.js"></script>
+    <script src="/static/admin/js/jquery.init.js"></script>
+    <script src="{% static "js/alert-util.js" %}" charset="UTF-8"></script>
+    {% if is_popup %}
+        <script src="{% static "js/c-is-for-cookie.js" %}" charset="UTF-8"></script>
+        <script src="{% static "js/popup-util.js" %}" charset="UTF-8"></script>
+        <script id="consistent-popup-size">
+          {
+            const $ = django.jQuery;
+
+            $(document).ready(function () {
+              const {pathname} = new URL(window.location.href)
+              PopupUtil(cookie).beginResizeTracking(pathname)
+            })
+          }
+        </script>
+    {% endif %}
+{% endblock extrahead %}
+
+{% block content %}
+    <div id="content-main">
+        <h1>Bulk Upload Users</h1>
+        <style>
+            .dataframe {
+                width: 100%;
+            }
+
+            .messagelist li {
+                margin-bottom: 0 !important;
+                margin-top: 10px !important;
+            }
+        </style>
+        <form {% if has_file_field %}enctype="multipart/form-data" {% endif %}{% if form_url %}action="{{ form_url }}" {% endif %}method="post"
+              id="bulk_upload_form" novalidate>{% csrf_token %}
+            {% if is_popup %}<input type="hidden" name="{{ is_popup_var }}" value="1">{% endif %}
+            {% if form.errors %}
+                <p class="errornote">
+                    {% if errors|length == 1 %}{% translate "Please correct the error below." %}{% else %}
+                        {% translate "Please correct the errors below." %}{% endif %}
+                </p>
+                {{ form.form.non_field_errors }}
+            {% endif %}
+            {% if errors %}
+                <ul id="error-alert" class="messagelist">
+                    <li class="error">The following fatal errors were found in your uploaded CSV.</li>
+                </ul>
+                {{ errors|safe }}
+            {% endif %}
+            {% if warnings %}
+                <ul id="warning-alert" class="messagelist">
+                    <li class="warning">The following non-fatal issues were found in your uploaded CSV.</li>
+                </ul>
+                {{ warnings|safe }}
+            {% endif %}
+            {% if created_users %}
+                <ul id="success-alert" class="messagelist">
+                    <li class="success">The below user accounts were created!</li>
+                </ul>
+                {{ created|safe }}
+            {% endif %}
+            {% block field_sets %}
+                {% for fieldset in form %}
+                    {% include "admin/includes/fieldset.html" %}
+                {% endfor %}
+            {% endblock %}
+
+            {% block submit_buttons_bottom %}
+                <div class="submit-row">
+                    <input type="submit" value="Submit" class="default" name="_submit">
+                    <input type="submit" value="Validate" class="secondary" name="_validate">
+                </div>
+            {% endblock %}
+        </form>
+    </div>
+{% endblock content %}
