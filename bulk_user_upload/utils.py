@@ -30,8 +30,11 @@ def get_perms_map():
 
 class FieldValidator(dict):
     # field_name = (validator, custom_error_message)
-    email = (lambda x: x and email_regex.match(x), None)
-    username = (lambda x: x and username_regex.match(x), lambda username: f"username expected not to be blank.")
+    email = (lambda x: not x or not email_regex.match(x), None)
+    username = (
+        lambda x: not x or not username_regex.match(x),
+        lambda username, *args: f"username must consist of 3 or more alphanumeric characters or underscores"
+    )
 
     _groups = None
     _permissions = None
@@ -41,17 +44,18 @@ class FieldValidator(dict):
         if not self._groups:
             self._groups = get_groups_map()
 
-        invalid = []
-
         def validate_groups(group_list_string):
+            invalid = []
+
             for group in group_list_string.split(','):
                 group = group.strip()
                 if group and group not in self._groups:
                     invalid.append(group)
-            return not invalid
+            return invalid
 
-        def invalid_info(group_list_string):
-            return f"{','.join(invalid)} are not valid group names."
+        def invalid_info(group_list_string, invalid):
+            message = f"{','.join(invalid)} are not valid group names."
+            return message
 
         return validate_groups, invalid_info
 
@@ -60,24 +64,27 @@ class FieldValidator(dict):
         if not self._permissions:
             self._permissions = get_perms_map()
 
-        invalid = []
-
         def validate_permissions(permissions_list_string):
+            invalid = []
+
             for perm in permissions_list_string.split(','):
                 perm = perm.strip()
                 if perm and perm not in self._permissions:
                     invalid.append(perm)
-            return not invalid
+            return invalid
 
-        def invalid_info(permissions_list_string):
-            return f"{','.join(invalid)} are not valid permission names; expecting format app_label.codename, e.g. {next(iter(self._permissions))}"
+        def invalid_info(permissions_list_string, invalid):
+            message = f"{','.join(invalid)} are not valid permission names; expecting format app_label.codename, e.g. {next(iter(self._permissions))}"
+            return message
 
         return validate_permissions, invalid_info
 
-    def __init__(self, **kwargs):
+    def __init__(self, username_field=None, email_field=None, **kwargs):
         super().__init__()
-        self["email"] = self.email
-        self["username"] = self.username
+        username_field = username_field if username_field else "username"
+        email_field = email_field if email_field else "email"
+        self[email_field] = self.email
+        self[username_field] = self.username
         self["groups"] = self.groups
         self["permissions"] = self.permissions
         for key, value in kwargs.items():
@@ -101,123 +108,170 @@ def prepare_users_from_dataframe(users: pandas.DataFrame):
 validation_result_tuple = namedtuple("validation_result", ["errors", "warnings"])
 
 
-def validate_users_from_dataframe(users: pandas.DataFrame, validator_class=FieldValidator) -> validation_result_tuple:
-    users = prepare_users_from_dataframe(users)
-    issues = {
-        "errors": {},
-        "warnings": {},
-    }
-    validator = validator_class()
+class BaseUsersValidator:
+    """
+        Validates a user dataframe. Any method with a name that starts as check_frame_ will be used to validate the
+        entire dataframe and any method with a name check_row_ will be used to validate each row.
+        """
+    issues = None
+    field_validator_class = FieldValidator
+    dataframe_validators_prefix = "check_frame_"
+    row_validators_prefix = "check_row_"
+    username_field = "username"
+    email_field = "email"
 
-    def validate_row(row):
-        for key, (is_valid, message_builder) in validator.items():
+    def __init__(self, field_validator_class=None, username_field=None, email_field=None):
+        self.field_validator = field_validator_class() if field_validator_class else self.field_validator_class()
+        self.username_field = username_field if username_field else self.username_field
+        self.email_field = email_field if email_field else self.email_field
+
+    def __call__(self, users: pandas.DataFrame) -> validation_result_tuple:
+        self.issues = {
+            "errors": {},
+            "warnings": {},
+        }
+        users.apply(self.validate_row, axis=1)
+        for method in self.get_row_validators():
+            users.apply(method, axis=1)
+        for method in self.get_dataframe_validators():
+            method(users)
+
+        return validation_result_tuple(self.issues["errors"], self.issues["warnings"])
+
+    def get_dataframe_validators(self):
+        methods = []
+        for method_name in dir(self):
+            maybe_method = getattr(self, method_name)
+            if callable(maybe_method) and method_name.startswith(self.dataframe_validators_prefix):
+                methods.append(maybe_method)
+        return methods
+
+    def get_row_validators(self):
+        methods = []
+        for method_name in dir(self):
+            maybe_method = getattr(self, method_name)
+            if callable(maybe_method) and method_name.startswith(self.row_validators_prefix):
+                methods.append(maybe_method)
+        return methods
+
+    def validate_row(self, row):
+        for key, (is_invalid, message_builder) in self.field_validator.items():
             value = row.get(key, None)
-            if not is_valid(value):
-                message = f"{key}='{value}' is invalid." if not message_builder else message_builder(value)
-                append_or_create(issues["errors"], row.name, message)
+            invalid = is_invalid(value)
+            if invalid:
+                message = f"{key}='{value}' is invalid." if not message_builder else message_builder(value, invalid)
+                append_or_create(self.issues["errors"], row.name, message)
 
-    def check_duplicates(df):
+
+class UsersValidator(BaseUsersValidator):
+
+    def check_frame_duplicates(self, df):
         def record_duplicates(dup_row, column):
-            append_or_create(issues["errors"], dup_row.name, f"row contains duplicate {column}='{dup_row[column]}'")
+            append_or_create(
+                self.issues["errors"],
+                dup_row.name,
+                f"row contains duplicate {column}='{dup_row[column]}'"
+            )
 
-        df[df.duplicated("email", keep=False)].apply(lambda row: record_duplicates(row, "email"), axis=1)
-        df[df.duplicated("username", keep=False)].apply(lambda row: record_duplicates(row, "username"), axis=1)
+        df[df.duplicated(self.email_field, keep=False)].apply(lambda row: record_duplicates(row, self.email_field), axis=1)
+        df[df.duplicated(self.username_field, keep=False)].apply(lambda row: record_duplicates(row, self.username_field), axis=1)
 
-    def check_username_collision(df):
+    def check_frame_username_collision(self, df):
         """We want to error on any record where we already have the username but not the given email"""
 
         def record_collision(row):
             append_or_create(
-                issues["errors"],
+                self.issues["errors"],
                 row.name,
-                f"row contains username='{row['username']}', but that user already exists with another email address",
+                f"row contains username='{row[self.username_field]}', but that user already exists with another email address",
             )
 
         q = Q(id=-1)
         for user in df.to_dict("records"):
-            q |= Q(name=user["username"]) & ~Q(email__iexact=user["email"])
-        existing_user_mapping = {user.username: user.email for user in User.objects.filter(q)}
-        df[df["username"].apply(lambda username: username in existing_user_mapping)].apply(record_collision, axis=1)
-
-    def check_email_collision(df):
-        """We want to warn on any record where we already have the email matched with a different username"""
-
-        def record_collision(row):
-            append_or_create(
-                issues["warnings"],
-                row.name,
-                f"row contains email='{row['email']}', but that user already exists with another username",
-            )
-
-        q = Q(id=-1)
-        for user in df.to_dict("records"):
-            q |= ~Q(name=user["username"]) & Q(email__iexact=user["email"])
-        existing_user_mapping = {user.email: user.username for user in User.objects.filter(q)}
-        df[df["email"].apply(lambda username: username in existing_user_mapping)].apply(record_collision, axis=1)
-
-    users.apply(validate_row, axis=1)
-    check_duplicates(users)
-    check_username_collision(users)
-    check_email_collision(users)
-
-    return validation_result_tuple(issues["errors"], issues["warnings"])
+            q |= Q(**{f"{self.username_field}": user[self.username_field]}) \
+                 & ~Q(**{f"{self.email_field}__iexact": user[self.email_field]})
+        existing_user_mapping = {
+            getattr(user, self.username_field): getattr(user, self.email_field) for user in User.objects.filter(q)
+        }
+        df[df[self.username_field].apply(lambda username: username in existing_user_mapping)].apply(record_collision, axis=1)
 
 
 creation_result_tuple = namedtuple("creation_result", ["created", "skipped"])
 
 
-def create_users_from_dataframe(users: pandas.DataFrame) -> creation_result_tuple:
-    users = prepare_users_from_dataframe(users)
-    user_records = users.to_dict("records")
+class BaseUsersCreator:
+    username_field = "username"
 
-    groups_map = get_groups_map()
-    perms_map = get_perms_map()
-    user_access_map = {}
-    for user_record in user_records:
-        perms = [perms_map[p.strip()] for p in user_record.pop("permissions", "").split(",") if p]
-        groups = [groups_map[g.strip()] for g in user_record.pop("groups", "").split(",") if g]
-        user_access_map[user_record["username"]] = dict(perms=perms, groups=groups)
+    def __init__(self, username_field=None):
+        self.username_field = username_field if username_field else self.username_field
 
-    existing_users = {getattr(u, "username"): u for u in User.objects.filter(username__in=[*user_access_map])}
+    def __call__(self, users: pandas.DataFrame) -> creation_result_tuple:
+        username_field = self.username_field
+        users = prepare_users_from_dataframe(users)
+        user_records = users.to_dict("records")
 
-    to_create, skipped = partition(lambda user: user["username"] in existing_users, user_records)
+        groups_map = get_groups_map()
+        perms_map = get_perms_map()
+        user_access_map = {}
+        for user_record in user_records:
+            perms = [perms_map[p.strip()] for p in user_record.pop("permissions", "").split(",") if p]
+            groups = [groups_map[g.strip()] for g in user_record.pop("groups", "").split(",") if g]
+            user_access_map[user_record[username_field]] = dict(perms=perms, groups=groups)
 
-    results = User.objects.bulk_create([
-        User(**dict(**user, password="no-login")) for user in to_create
-    ], ignore_conflicts=False)
+        existing_users = {getattr(u, username_field): u for u in User.objects.filter(username__in=[*user_access_map])}
 
-    results_with_ids = User.objects.filter(**{"username__in": [getattr(u, "username") for u in results]})
-    for user in results_with_ids:
-        if user_access_map[getattr(user, "username")]["perms"]:
-            user.user_permissions.set(user_access_map[getattr(user, "username")]["perms"])
-        if user_access_map[getattr(user, "username")]["groups"]:
-            user.groups.set(user_access_map[getattr(user, "username")]["groups"])
+        to_create, skipped = partition(lambda user: user[username_field] in existing_users, user_records)
 
-    return creation_result_tuple(results_with_ids, [existing_users[u["username"]] for u in skipped])
+        results = User.objects.bulk_create([
+            User(**dict(**user, password="no-login")) for user in to_create
+        ], ignore_conflicts=False)
+
+        results_with_ids = User.objects.filter(**{f"{username_field}__in": [getattr(u, username_field) for u in results]})
+        for user in results_with_ids:
+            if user_access_map[getattr(user, username_field)]["perms"]:
+                user.user_permissions.set(user_access_map[getattr(user, username_field)]["perms"])
+            if user_access_map[getattr(user, username_field)]["groups"]:
+                user.groups.set(user_access_map[getattr(user, username_field)]["groups"])
+
+        return creation_result_tuple(results_with_ids, [existing_users[u[username_field]] for u in skipped])
 
 
 def get_email_recipient_name(user: User):
     return f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else user.email
 
 
-def send_emails_for_created_users(
-        template_name: str, login_url: str, from_email: str, subject: str, get_recipient_name, new_users: List[User]
-):
-    send_mass_mail(
-        [
-            (
-                subject,
-                render_to_string(
-                    template_name=template_name,
-                    context=dict(
-                        login_url=login_url,
-                        username=user.username,
-                        recipient_name=get_recipient_name(user)
-                    )
-                ),
-                from_email,
-                [user.email],
-            )
-            for user in new_users
-        ]
-    )
+class EmailSender:
+    username_field = "username"
+    email_field = "email"
+
+    def __init__(self, username_field=None, email_field=None):
+        self.username_field = username_field if username_field else self.username_field
+        self.email_field = email_field if email_field else self.email_field
+
+    def __call__(
+        self,
+        template_name: str,
+        login_url: str,
+        from_email: str,
+        subject: str,
+        get_recipient_name,
+        new_users: List[User]
+    ):
+        send_mass_mail(
+            [
+                (
+                    subject,
+                    render_to_string(
+                        template_name=template_name,
+                        context=dict(
+                            login_url=login_url,
+                            username=getattr(user, self.username_field),
+                            recipient_name=get_recipient_name(user)
+                        )
+                    ),
+                    from_email,
+                    [getattr(user, self.email_field)],
+                )
+                for user in new_users
+            ]
+        )

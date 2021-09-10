@@ -38,6 +38,23 @@ class BulkUploadUsers(generic.FormView):
     email_sender_address = bulk_user_upload_settings.ACCOUNT_CREATION_EMAIL_SENDER_ADDRESS
     email_subject = bulk_user_upload_settings.ACCOUNT_CREATION_EMAIL_SUBJECT
     login_url = bulk_user_upload_settings.LOGIN_URL
+    field_validator_cls = FieldValidator
+    users_creator_cls = bulk_user_upload_settings.USERS_CREATOR
+    email_sender_cls = bulk_user_upload_settings.EMAIL_SENDER
+    username_field = bulk_user_upload_settings.USERNAME_FIELD
+    email_field = bulk_user_upload_settings.EMAIL_FIELD
+
+    @property
+    def user_field_validators(self):
+        return self.field_validator_cls(**bulk_user_upload_settings.USER_FIELD_VALIDATORS)
+
+    @property
+    def users_creator(self):
+        return self.users_creator_cls(username_field=self.username_field)
+
+    @property
+    def email_sender(self):
+        return self.email_sender_cls(username_field=self.username_field, email_field=self.email_field)
 
     @staticmethod
     def get_email_recipient_name(user):
@@ -70,10 +87,10 @@ class BulkUploadUsers(generic.FormView):
     def form_valid(self, form):
         try:
             with transaction.atomic():
-                created, skipped = bulk_user_upload_settings.CREATE_USERS(form.uploaded_data)
+                created, skipped = self.users_creator(form.uploaded_data)
                 messages.add_message(self.request, messages.SUCCESS, f"{len(created)} New users created.")
                 if form.cleaned_data["send_emails"]:
-                    bulk_user_upload_settings.SEND_EMAILS(
+                    self.email_sender(
                         self.email_template_name,
                         self.request.build_absolute_uri('/'),
                         self.email_sender_address,
@@ -92,7 +109,7 @@ class BulkUploadUsers(generic.FormView):
         context_data = self.get_context_data(form=form)
         df = form.uploaded_data
         if "warnings" in df or "errors" in form.uploaded_data:
-            user_field_validators = FieldValidator(**bulk_user_upload_settings.USER_FIELD_VALIDATORS)
+            user_field_validators = self.user_field_validators
             if "warnings" in df:
                 context_data["warnings"] = df[df["warnings"].apply(bool)][["row", "warnings", *user_field_validators]].to_html(
                     index=False

@@ -15,10 +15,21 @@ class BulkUserUploadForm(forms.Form):
     uploaded_data = pandas.DataFrame()
     csv_file = forms.FileField(label="CSV File")
     send_emails = forms.BooleanField(initial=True, required=False)
+    field_validator_cls = FieldValidator
+    username_field = bulk_user_upload_settings.USERNAME_FIELD
+    email_field = bulk_user_upload_settings.EMAIL_FIELD
 
     @property
     def user_field_validators(self):
-        return FieldValidator(**bulk_user_upload_settings.USER_FIELD_VALIDATORS)
+        return self.field_validator_cls(**bulk_user_upload_settings.USER_FIELD_VALIDATORS)
+
+    @property
+    def users_validator(self):
+        return bulk_user_upload_settings.USERS_VALIDATOR(
+            self.field_validator_cls,
+            username_field=self.username_field,
+            email_field=self.email_field,
+        )
 
     def is_valid(self, validate_only=False):
         self.validate_only = validate_only
@@ -52,7 +63,7 @@ class BulkUserUploadForm(forms.Form):
             if any(missing):
                 raise ValidationError(f"Expected headers {missing}; got {list(users.columns)}")
             users = users[self.user_field_validators]
-            errors, warnings = bulk_user_upload_settings.VALIDATE_USERS(users)
+            errors, warnings = self.users_validator(users)
             if self.validate_only or errors:
                 self.uploaded_data = self._prepare_errors_and_warnings(users, errors, warnings)
                 if errors:

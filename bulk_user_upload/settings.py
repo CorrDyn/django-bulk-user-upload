@@ -26,12 +26,14 @@ from django.utils.module_loading import import_string
 DEFAULTS = {
     'ACCOUNT_CREATION_EMAIL_SENDER_ADDRESS': None,
     'ACCOUNT_CREATION_EMAIL_SUBJECT': 'Account Created',
+    'USERNAME_FIELD': 'username',
+    'EMAIL_FIELD': 'email',
     'LOGIN_URL': '/',
     'USER_UPLOAD_FORM': 'bulk_user_upload.forms.BulkUserUploadForm',
-    'CREATE_USERS': 'bulk_user_upload.utils.create_users_from_dataframe',
-    'VALIDATE_USERS': 'bulk_user_upload.utils.validate_users_from_dataframe',
+    'USERS_CREATOR': 'bulk_user_upload.utils.BaseUsersCreator',
+    'USERS_VALIDATOR': 'bulk_user_upload.utils.UsersValidator',
     'USER_FIELD_VALIDATORS': {},
-    'SEND_EMAILS': 'bulk_user_upload.utils.send_emails_for_created_users',
+    'EMAIL_SENDER': 'bulk_user_upload.utils.EmailSender',
     'GET_EMAIL_RECIPIENT_NAME': 'bulk_user_upload.utils.get_email_recipient_name',
 }
 
@@ -39,10 +41,10 @@ DEFAULTS = {
 # List of settings that may be in string import notation.
 IMPORT_STRINGS = [
     'USER_UPLOAD_FORM',
-    'CREATE_USERS',
-    'VALIDATE_USERS',
+    'USERS_CREATOR',
+    'USERS_VALIDATOR',
     'USER_FIELD_VALIDATORS',
-    'SEND_EMAILS',
+    'EMAIL_SENDER',
     'GET_EMAIL_RECIPIENT_NAME',
 ]
 

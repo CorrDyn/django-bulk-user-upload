@@ -49,9 +49,10 @@ INITIAL_ADMIN_EMAIL = "admin@email.com"
 INITIAL_ADMIN_PASSWORD = "superstrongpassword123"
 BULK_USER_UPLOAD = dict(
     USER_FIELD_VALIDATORS=dict(
-        name=(lambda name: name and len(name) < 255, lambda name: "name is a required field")
+        name=(lambda name: name and len(name) < 255, lambda name, *args: "name is a required field")
     ),
-    GET_EMAIL_RECIPIENT_NAME=lambda user: user.name
+    GET_EMAIL_RECIPIENT_NAME=lambda user: user.name,
+    USERS_VALIDATOR='users.bulk_user_upload_customizations.CustomUsersValidator'
 )
 
 MIDDLEWARE = [
