@@ -104,9 +104,12 @@ def append_or_create(dict_obj, key, value):
     dict_obj[key] = [value]
 
 
-def prepare_users_from_dataframe(users: pandas.DataFrame):
-    users["email"] = users["email"].apply(lambda x: x.lower())
-    return users
+class UsersPreProcessor:
+
+    @staticmethod
+    def __call__(users: pandas.DataFrame):
+        users["email"] = users["email"].apply(lambda x: x.lower())
+        return users
 
 
 validation_result_tuple = namedtuple("validation_result", ["errors", "warnings"])
@@ -209,13 +212,18 @@ creation_result_tuple = namedtuple("creation_result", ["created", "skipped"])
 
 class BaseUsersCreator:
     username_field = "username"
+    users_preprocessor_cls = UsersPreProcessor
 
-    def __init__(self, username_field=None):
+    def preprocess_users(self, users):
+        return self.users_preprocessor_cls()(users)
+
+    def __init__(self, username_field=None, users_preprocessor_cls=None):
         self.username_field = username_field if username_field else self.username_field
+        self.users_preprocessor_cls = users_preprocessor_cls if users_preprocessor_cls else self.users_preprocessor_cls
 
     def __call__(self, users: pandas.DataFrame) -> creation_result_tuple:
         username_field = self.username_field
-        users = prepare_users_from_dataframe(users)
+        users = self.preprocess_users(users)
         user_records = users.to_dict("records")
 
         groups_map = get_groups_map()

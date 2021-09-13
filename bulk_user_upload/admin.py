@@ -39,6 +39,7 @@ class BulkUploadUsers(generic.FormView):
     email_subject = bulk_user_upload_settings.ACCOUNT_CREATION_EMAIL_SUBJECT
     login_url = bulk_user_upload_settings.LOGIN_URL
     field_validator_cls = FieldValidator
+    users_preprocessor_cls = bulk_user_upload_settings.USERS_PREPROCESSOR
     users_creator_cls = bulk_user_upload_settings.USERS_CREATOR
     email_sender_cls = bulk_user_upload_settings.EMAIL_SENDER
     username_field = bulk_user_upload_settings.USERNAME_FIELD
@@ -50,7 +51,7 @@ class BulkUploadUsers(generic.FormView):
 
     @property
     def users_creator(self):
-        return self.users_creator_cls(username_field=self.username_field)
+        return self.users_creator_cls(username_field=self.username_field, users_preprocessor_cls=self.users_preprocessor_cls)
 
     @property
     def email_sender(self):

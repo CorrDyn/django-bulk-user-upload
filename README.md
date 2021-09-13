@@ -31,6 +31,7 @@ BULK_USER_UPLOAD = {
     'EMAIL_FIELD': 'email',  # user model email field
     'LOGIN_URL': '/',  # used in account creation notification email template
     'USER_UPLOAD_FORM': 'bulk_user_upload.forms.BulkUserUploadForm',  # django admin upload form
+    'USERS_PREPROCESSOR': 'bulk_user_upload.utils.UsersPreProcessor',  # cleanup/pre-process the uploaded CSV
     'USERS_CREATOR': 'bulk_user_upload.utils.BaseUsersCreator',  # creates users from the uploaded CSV
     'USERS_VALIDATOR': 'bulk_user_upload.utils.UsersValidator',  # validates users from the uploaded CSV
     'USER_FIELD_VALIDATORS': {},  # add or override field-level validators
