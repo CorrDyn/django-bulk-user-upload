@@ -1,0 +1,6 @@
+include README.md
+include LICENSE.md
+recursive-include bulk_user_upload/static *.js *.css
+recursive-include bulk_user_upload/templates *.html
+global-exclude __pycache__
+global-exclude *.py[co]
