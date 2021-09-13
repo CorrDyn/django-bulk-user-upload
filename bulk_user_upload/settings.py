@@ -24,16 +24,18 @@ from django.test.signals import setting_changed
 from django.utils.module_loading import import_string
 
 DEFAULTS = {
-    'ACCOUNT_CREATION_EMAIL_SENDER_ADDRESS': None,
+    'USERNAME_FIELD': 'username',  # user model username field
+    'EMAIL_FIELD': 'email',  # user model email field
+    'LOGIN_URL': '/',  # used in account creation notification email template
+    'USER_UPLOAD_FORM': 'bulk_user_upload.forms.BulkUserUploadForm',  # django admin upload form
+    'USERS_CREATOR': 'bulk_user_upload.utils.BaseUsersCreator',  # creates users from the uploaded CSV
+    'USERS_VALIDATOR': 'bulk_user_upload.utils.UsersValidator',  # validates users from the uploaded CSV
+    'USER_FIELD_VALIDATORS': {},  # add or override field-level validators
+    'SEND_EMAILS_BY_DEFAULT': True,  # whether "send emails" is checked by default in the upload form
+    'ACCOUNT_CREATION_EMAIL_SENDER_ADDRESS': None,  # email address used to notify user of account creation
     'ACCOUNT_CREATION_EMAIL_SUBJECT': 'Account Created',
-    'USERNAME_FIELD': 'username',
-    'EMAIL_FIELD': 'email',
-    'LOGIN_URL': '/',
-    'USER_UPLOAD_FORM': 'bulk_user_upload.forms.BulkUserUploadForm',
-    'USERS_CREATOR': 'bulk_user_upload.utils.BaseUsersCreator',
-    'USERS_VALIDATOR': 'bulk_user_upload.utils.UsersValidator',
-    'USER_FIELD_VALIDATORS': {},
-    'EMAIL_SENDER': 'bulk_user_upload.utils.EmailSender',
+    'EMAIL_SENDER': 'bulk_user_upload.utils.EmailSender',  # sends emails to created accounts
+    # compute the name of the recipient, used in the account creation notification email template
     'GET_EMAIL_RECIPIENT_NAME': 'bulk_user_upload.utils.get_email_recipient_name',
 }
 

@@ -14,7 +14,7 @@ from bulk_user_upload.utils import FieldValidator
 class BulkUserUploadForm(forms.Form):
     uploaded_data = pandas.DataFrame()
     csv_file = forms.FileField(label="CSV File")
-    send_emails = forms.BooleanField(initial=True, required=False)
+    send_emails = forms.BooleanField(initial=bulk_user_upload_settings.SEND_EMAILS_BY_DEFAULT, required=False)
     field_validator_cls = FieldValidator
     username_field = bulk_user_upload_settings.USERNAME_FIELD
     email_field = bulk_user_upload_settings.EMAIL_FIELD
