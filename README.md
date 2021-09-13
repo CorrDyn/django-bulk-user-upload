@@ -15,6 +15,20 @@ INSTALLED_PACKAGES = [
 ]
 ```
 
+Then override the default User admin:
+```python
+from django.contrib.admin import register
+from django.contrib.auth import get_user_model
+
+from bulk_user_upload.admin import BulkUploadUserAdmin
+
+User = get_user_model()
+
+@register(User)
+class CustomUserAdmin(BulkUploadUserAdmin):
+    pass
+```
+
 # Setup and Customization
 By default, the upload only processes `username`, `email`, `permissions`, and `groups`, e.g., you could use a CSV
 with the following information:
@@ -56,7 +70,7 @@ def intish(value):
 BULK_USER_UPLOAD = dict(
     USER_FIELD_VALIDATORS=dict(
         is_staff=(
-            lambda is_staff: intish(is_staff) and int(is_staff) in [True, False],
+            lambda is_staff: not intish(is_staff) or int(is_staff) not in [True, False],
             lambda is_staff, *args: "is_staff must be 0 or 1.",
         )
     )

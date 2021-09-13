@@ -58,9 +58,9 @@ def intish(value):
 BULK_USER_UPLOAD = dict(
     SEND_EMAILS_BY_DEFAULT=False,
     USER_FIELD_VALIDATORS=dict(
-        name=(lambda name: name and len(name) < 255, lambda name, *args: "name is a required field"),
+        name=(lambda name: not name or len(name) > 255, lambda name, *args: "name is a required field"),
         is_staff=(
-            lambda is_staff: intish(is_staff) and int(is_staff) in [True, False],
+            lambda is_staff: not intish(is_staff) or int(is_staff) not in [True, False],
             lambda is_staff, *args: "is_staff must be 0 or 1.",
         )
     ),
