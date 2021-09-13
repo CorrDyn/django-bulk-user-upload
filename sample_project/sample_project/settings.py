@@ -19,7 +19,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # in the sample project
 sys.path.insert(0, str(BASE_DIR.parent))
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
@@ -30,7 +29,6 @@ SECRET_KEY = 'django-insecure-k1a^w)-w&_ygiut4&s=vv!8xkjk8lsm#jnupj!st)j35*0f_%u
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 INSTALLED_APPS = [
@@ -47,9 +45,24 @@ AUTH_USER_MODEL = "users.User"
 INITIAL_ADMIN_USERNAME = "admin"
 INITIAL_ADMIN_EMAIL = "admin@email.com"
 INITIAL_ADMIN_PASSWORD = "superstrongpassword123"
+
+
+def intish(value):
+    try:
+        int(value)
+        return True
+    except:  # noqa
+        return False
+
+
 BULK_USER_UPLOAD = dict(
+    SEND_EMAILS_BY_DEFAULT=False,
     USER_FIELD_VALIDATORS=dict(
-        name=(lambda name: name and len(name) < 255, lambda name, *args: "name is a required field")
+        name=(lambda name: name and len(name) < 255, lambda name, *args: "name is a required field"),
+        is_staff=(
+            lambda is_staff: intish(is_staff) and int(is_staff) in [True, False],
+            lambda is_staff, *args: "is_staff must be 0 or 1.",
+        )
     ),
     GET_EMAIL_RECIPIENT_NAME=lambda user: user.name,
     USERS_VALIDATOR='users.bulk_user_upload_customizations.CustomUsersValidator'
@@ -85,7 +98,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'sample_project.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
@@ -95,7 +107,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -115,7 +126,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
 
@@ -128,7 +138,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/

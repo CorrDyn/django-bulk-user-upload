@@ -1,12 +1,12 @@
-username,email,name,permissions,groups,reason
-test_bad1,test-bad1@corrdyn.com,Test User 1,,,
-test_bad2,test-bad2@corrdyn.com,,,,No Name
-test_bad3,test-bad3@corrdyn.com,Test Bad User 3,,,
-test_bad4,test-bad4@corrdyn.com,Test Bad User 4,perm.not_real_perm,,Bad Permissions
-test_bad5,test-bad5@corrdyn,Test Bad User 5,,,Bad Email
-test_bad6,,Test Bad User 6,,,No Email
-test_bad7,test-bad7@corrdyn.com,Test Bad User 7,,Non-Existent Group,Bad Group
-test_bad8,test-bad8@corrdyn.com,Test Bad User 8,,,Duplicate Email
-test_bad8,test-bad8@corrdyn.com,Test Bad User 9,,,Duplicate Email
-test_bad10,test-bad10@corrdyn.com,Test Bad User 10,,,Duplicate Name
-test_bad11,test-bad11@corrdyn.com,Test Bad User 10,,,Duplicate Name
+is_staff,username,email,name,permissions,groups,reason
+0,test_bad1,test-bad1@corrdyn.com,Test User 1,,,
+0,test_bad2,test-bad2@corrdyn.com,,,,No Name
+0,test_bad3,test-bad3@corrdyn.com,Test Bad User 3,,,
+0,test_bad4,test-bad4@corrdyn.com,Test Bad User 4,perm.not_real_perm,,Bad Permissions
+0,test_bad5,test-bad5@corrdyn,Test Bad User 5,,,Bad Email
+0,test_bad6,,Test Bad User 6,,,No Email
+0,test_bad7,test-bad7@corrdyn.com,Test Bad User 7,,Non-Existent Group,Bad Group
+0,test_bad8,test-bad8@corrdyn.com,Test Bad User 8,,,Duplicate Email
+0,test_bad8,test-bad8@corrdyn.com,Test Bad User 9,,,Duplicate Email
+0,test_bad10,test-bad10@corrdyn.com,Test Bad User 10,,,Duplicate Name
+0,test_bad11,test-bad11@corrdyn.com,Test Bad User 10,,,Duplicate Name
