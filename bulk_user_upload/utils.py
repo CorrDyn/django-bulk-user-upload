@@ -234,7 +234,9 @@ class BaseUsersCreator:
             groups = [groups_map[g.strip()] for g in user_record.pop("groups", "").split(",") if g]
             user_access_map[user_record[username_field]] = dict(perms=perms, groups=groups)
 
-        existing_users = {getattr(u, username_field): u for u in User.objects.filter(username__in=[*user_access_map])}
+        existing_users = {
+            getattr(u, username_field): u for u in User.objects.filter(**{f"{username_field}__in": [*user_access_map]})
+        }
 
         to_create, skipped = partition(lambda user: user[username_field] in existing_users, user_records)
 

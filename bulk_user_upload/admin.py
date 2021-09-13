@@ -118,7 +118,9 @@ class BulkUploadUsers(generic.FormView):
             if "errors" in form.uploaded_data:
                 context_data["errors"] = df[df["errors"].apply(bool)][["row", "errors", *user_field_validators]].to_html(index=False)
         if created:
-            context_data["created"] = pandas.DataFrame([dict(username=u.username, email=u.email) for u in created]).to_html(index=False)
+            context_data["created"] = pandas.DataFrame(
+                [dict(username=getattr(u, self.username_field), email=u.email) for u in created]
+            ).to_html(index=False)
         return self.render_to_response(context_data)
 
     def get_success_url(self):
