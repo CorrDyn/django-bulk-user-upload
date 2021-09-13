@@ -16,19 +16,21 @@ class BulkUserUploadForm(forms.Form):
     csv_file = forms.FileField(label="CSV File")
     send_emails = forms.BooleanField(initial=bulk_user_upload_settings.SEND_EMAILS_BY_DEFAULT, required=False)
     field_validator_cls = FieldValidator
+    field_validator_overrides = bulk_user_upload_settings.USER_FIELD_VALIDATORS
     username_field = bulk_user_upload_settings.USERNAME_FIELD
     email_field = bulk_user_upload_settings.EMAIL_FIELD
 
     @property
     def user_field_validators(self):
-        return self.field_validator_cls(**bulk_user_upload_settings.USER_FIELD_VALIDATORS)
+        return self.field_validator_cls(**self.field_validator_overrides)
 
     @property
     def users_validator(self):
         return bulk_user_upload_settings.USERS_VALIDATOR(
-            self.field_validator_cls,
             username_field=self.username_field,
             email_field=self.email_field,
+            field_validator_cls=self.field_validator_cls,
+            field_validator_overrides=self.field_validator_overrides,
         )
 
     def is_valid(self, validate_only=False):

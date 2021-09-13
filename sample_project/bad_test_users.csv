@@ -10,3 +10,4 @@ is_staff,username,email,name,permissions,groups,reason
 0,test_bad8,test-bad8@corrdyn.com,Test Bad User 9,,,Duplicate Email
 0,test_bad10,test-bad10@corrdyn.com,Test Bad User 10,,,Duplicate Name
 0,test_bad11,test-bad11@corrdyn.com,Test Bad User 10,,,Duplicate Name
+2,test_bad12,test-bad12@corrdyn.com,Test Bad User 12,,,Invalid is_staff value

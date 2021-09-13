@@ -83,10 +83,14 @@ class FieldValidator(dict):
         super().__init__()
         username_field = username_field if username_field else "username"
         email_field = email_field if email_field else "email"
-        self[email_field] = self.email
-        self[username_field] = self.username
-        self["groups"] = self.groups
-        self["permissions"] = self.permissions
+        if kwargs.get(email_field, True):
+            self[email_field] = kwargs.get(email_field, self.email)
+        if kwargs.get(username_field, True):
+            self[username_field] = kwargs.get(username_field, self.username)
+        if kwargs.get("groups", True):
+            self["groups"] = kwargs.get("groups", self.groups)
+        if kwargs.get("permissions", True):
+            self["permissions"] = kwargs.get("permissions", self.permissions)
         for key, value in kwargs.items():
             if not value:
                 self.pop(key, None)
@@ -114,14 +118,18 @@ class BaseUsersValidator:
         entire dataframe and any method with a name check_row_ will be used to validate each row.
         """
     issues = None
-    field_validator_class = FieldValidator
+    field_validator_cls = FieldValidator
+    field_validator_overrides = {}
     dataframe_validators_prefix = "check_frame_"
     row_validators_prefix = "check_row_"
     username_field = "username"
     email_field = "email"
 
-    def __init__(self, field_validator_class=None, username_field=None, email_field=None):
-        self.field_validator = field_validator_class() if field_validator_class else self.field_validator_class()
+    def __init__(self, username_field=None, email_field=None, field_validator_cls=None, field_validator_overrides=None):
+        self.field_validator_overrides = field_validator_overrides if field_validator_overrides \
+            else self.field_validator_overrides
+        self.field_validator = field_validator_cls(**self.field_validator_overrides) if field_validator_cls \
+            else self.field_validator_cls(**self.field_validator_overrides)
         self.username_field = username_field if username_field else self.username_field
         self.email_field = email_field if email_field else self.email_field
 
